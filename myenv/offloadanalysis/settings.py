@@ -20,7 +20,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # See https://docs.djangoproject.com/en/3.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'dq45@*ex=zhm0cb#t83ve^ip56ipfty4oujz%7m_=nqi7*fe81'
+SECRET_KEY = ''
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -78,9 +78,9 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
         #'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
-        'NAME':'offloaddb',
+        'NAME':'',
         'USER':'postgres',
-        'PASSWORD':'superuser',
+        'PASSWORD':'',
         'HOST':'localhost',
         'PORT':'5432',
     }

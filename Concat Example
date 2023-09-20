@@ -1,0 +1,34 @@
+import pandas as pd
+
+# Create TableA and TableB as pandas DataFrames
+tableA_data = {'CustomerName': ['Pankaj', 'Pankaj', 'Sagar'],
+               'AckDate': ['02-05-2021', '11-09-2023', '12-02-2022']}
+
+tableB_data = {'CustomerName': ['Pankaj', 'Sagar'],
+               'SarDate': ['11-11-2022', '03-01-2021']}
+
+tableA = pd.DataFrame(tableA_data)
+tableB = pd.DataFrame(tableB_data)
+
+# Create empty DataFrame for TableC
+tableC = pd.DataFrame(columns=['CustomerName', 'Date'])
+
+# Get the unique customer names from both tables
+unique_customers = set(tableA['CustomerName'].unique().tolist() + tableB['CustomerName'].unique().tolist())
+
+# Loop through the unique customers and populate TableC
+for customer in unique_customers:
+    dates = []
+    
+    ack_dates = tableA.loc[tableA['CustomerName'] == customer, 'AckDate']
+    for ack_date in ack_dates:
+        dates.append(f"{ack_date} (AckDate)")
+        
+    sar_dates = tableB.loc[tableB['CustomerName'] == customer, 'SarDate']
+    for sar_date in sar_dates:
+        dates.append(f"{sar_date} (SarDate)")
+        
+    date_str = ", ".join(dates)
+    tableC = tableC.append({'CustomerName': customer, 'Date': date_str}, ignore_index=True)
+
+print(tableC)

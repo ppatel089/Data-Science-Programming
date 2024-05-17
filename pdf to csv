@@ -1,0 +1,33 @@
+import PyPDF2
+import csv
+import re
+
+# Path to your PDF file
+pdf_path = 'path_to_your_pdf.pdf'
+
+# Open the PDF file
+with open(pdf_path, 'rb') as file:
+    reader = PyPDF2.PdfReader(file)
+    text = ''
+    for page in reader.pages:
+        text += page.extract_text()
+
+# Find the account number
+account_match = re.search(r'Check Account:\s*(\d+)', text)
+account_number = account_match.group(1) if account_match else 'Unknown'
+
+# Find all checks data
+pattern = r'(\d+)\s+(\d+/\d+/\d+)\s+([\d\.]+)\s+(\d+)'
+checks = re.findall(pattern, text)
+
+# CSV path
+csv_path = 'output.csv'
+
+# Write data to CSV
+with open(csv_path, 'w', newline='') as file:
+    writer = csv.writer(file)
+    writer.writerow(['Account', 'Check#', 'Issued', 'Amount', 'Reference'])
+    for check in checks:
+        writer.writerow([account_number] + list(check))
+
+print("CSV file has been created successfully.")

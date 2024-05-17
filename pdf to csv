@@ -12,13 +12,13 @@ with open(pdf_path, 'rb') as file:
     for page in reader.pages:
         text += page.extract_text()
 
-# Find the account number
-account_match = re.search(r'Check Account:\s*(\d+)', text)
+# Using regex to handle multiple spaces
+account_match = re.search(r'Check Account:\s+(\d+)', text)
 account_number = account_match.group(1) if account_match else 'Unknown'
 
-# Find all checks data
+# Adjusted regex to handle variable number of spaces
 pattern = r'(\d+)\s+(\d+/\d+/\d+)\s+([\d\.]+)\s+(\d+)'
-checks = re.findall(pattern, text)
+checks = re.findall(pattern, text.replace('\n', ' '))
 
 # CSV path
 csv_path = 'output.csv'
@@ -28,6 +28,7 @@ with open(csv_path, 'w', newline='') as file:
     writer = csv.writer(file)
     writer.writerow(['Account', 'Check#', 'Issued', 'Amount', 'Reference'])
     for check in checks:
+        # Ensure we write data as seen
         writer.writerow([account_number] + list(check))
 
 print("CSV file has been created successfully.")

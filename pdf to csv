@@ -1,34 +1,62 @@
 import PyPDF2
-import csv
-import re
+import pypdfium2 as pdfium
+import pandas as pd
+import matplotlib.pyplot as plt
 
 # Path to your PDF file
 pdf_path = 'path_to_your_pdf.pdf'
 
-# Open the PDF file
-with open(pdf_path, 'rb') as file:
-    reader = PyPDF2.PdfReader(file)
-    text = ''
-    for page in reader.pages:
-        text += page.extract_text()
+# Function to render PDF to image
+def render_pdf_to_image(pdf_path):
+    pdf = pdfium.PdfDocument(pdf_path)
+    page = pdf.get_page(0)  # Get the first page
+    image = page.render()  # Render the page as an image
+    pdf.close()
+    plt.imshow(image)
+    plt.axis('off')  # Turn off axis numbers and ticks
+    plt.show()
 
-# Using regex to handle multiple spaces
-account_match = re.search(r'Check Account:\s+(\d+)', text)
-account_number = account_match.group(1) if account_match else 'Unknown'
+# Function to extract text and convert to CSV
+def pdf_text_to_csv(pdf_path, csv_path):
+    with open(pdf_path, 'rb') as file:
+        reader = PyPDF2.PdfReader(file)
+        text = ''
+        for page in reader.pages:
+            text += page.extract_text() if page.extract_text() else ''
+    
+    # Normalize spaces and parse the data using pandas
+    text = ' '.join(text.split())
+    data = {
+        'Account': [],
+        'Check#': [],
+        'Issued': [],
+        'Amount': [],
+        'Reference': []
+    }
 
-# Adjusted regex to handle variable number of spaces
-pattern = r'(\d+)\s+(\d+/\d+/\d+)\s+([\d\.]+)\s+(\d+)'
-checks = re.findall(pattern, text.replace('\n', ' '))
+    # Regex pattern to extract data
+    account_match = re.search(r'Check Account:\s*(\d+)', text)
+    account_number = account_match.group(1) if account_match else 'Unknown'
+    pattern = r'(\d+)\s+(\d+/\d+/\d+)\s+([\d\.]+)\s+(\d+)'
+    checks = re.findall(pattern, text)
+    
+    for check in checks:
+        data['Account'].append(account_number)
+        data['Check#'].append(check[0])
+        data['Issued'].append(check[1])
+        data['Amount'].append(check[2])
+        data['Reference'].append(check[3])
+    
+    # Create DataFrame and save to CSV
+    df = pd.DataFrame(data)
+    df.to_csv(csv_path, index=False)
+    print(f"Data successfully written to {csv_path}")
 
-# CSV path
+# Display the first page of the PDF
+render_pdf_to_image(pdf_path)
+
+# Path where you want to save the CSV file
 csv_path = 'output.csv'
 
-# Write data to CSV
-with open(csv_path, 'w', newline='') as file:
-    writer = csv.writer(file)
-    writer.writerow(['Account', 'Check#', 'Issued', 'Amount', 'Reference'])
-    for check in checks:
-        # Ensure we write data as seen
-        writer.writerow([account_number] + list(check))
-
-print("CSV file has been created successfully.")
+# Convert PDF text to CSV
+pdf_text_to_csv(pdf_path, csv_path)

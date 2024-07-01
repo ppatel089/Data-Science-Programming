@@ -8,49 +8,71 @@ atm_df = pd.read_csv('/path/to/atm.csv')
 behavior_df['Customer Number'] = behavior_df['Customer Number'].astype(int)
 atm_df['Customer Number'] = atm_df['Customer Number'].astype(int)
 
-# Perform calculations for the final table
-deposit_df = atm_df[atm_df['Transaction Type'] == 'Deposit'][['Jan-24', 'Feb-24', 'Mar-24']]
-withdrawal_df = atm_df[atm_df['Transaction Type'] == 'Withdrawal'][['Jan-24', 'Feb-24', 'Mar-24']]
-
-total_atm_deposit = deposit_df.sum(axis=1).values[0]
-average_atm_deposit = deposit_df.mean(axis=1).values[0]
-std_atm_deposit = deposit_df.std(axis=1).values[0]
-
-total_atm_withdrawal = withdrawal_df.sum(axis=1).values[0]
-average_atm_withdrawal = withdrawal_df.mean(axis=1).values[0]
-std_atm_withdrawal = withdrawal_df.std(axis=1).values[0]
-
-if average_atm_deposit > behavior_df['ATM Deposit Excessive Volume'][0]:
-    action_for_atm_deposit = 'Increase'
-elif average_atm_deposit < behavior_df['ATM Deposit Normal Volume'][0]:
-    action_for_atm_deposit = 'Decrease'
-else:
-    action_for_atm_deposit = 'No Action'
-
-if average_atm_withdrawal > behavior_df['ATM Withdrawal Excessive Volume'][0]:
-    action_for_atm_withdrawal = 'Increase'
-elif average_atm_withdrawal < behavior_df['ATM Withdrawal Normal Volume'][0]:
-    action_for_atm_withdrawal = 'Decrease'
-else:
-    action_for_atm_withdrawal = 'No Action'
-
-# Create the final table
+# Initialize lists to store final table data
 final_data = {
-    'Customer Number': behavior_df['Customer Number'],
-    'ATM Deposit Normal Volume': behavior_df['ATM Deposit Normal Volume'],
-    'ATM Deposit Excessive Volume': behavior_df['ATM Deposit Excessive Volume'],
-    'ATM Withdrawal Normal Volume': behavior_df['ATM Withdrawal Normal Volume'],
-    'ATM Withdrawal Excessive Volume': behavior_df['ATM Withdrawal Excessive Volume'],
-    'Total ATM Deposit': [total_atm_deposit],
-    'Average ATM Deposit': [average_atm_deposit],
-    'STD ATM Deposit': [std_atm_deposit],
-    'Total ATM Withdrawal': [total_atm_withdrawal],
-    'Average ATM Withdrawal': [average_atm_withdrawal],
-    'STD ATM Withdrawal': [std_atm_withdrawal],
-    'Action for ATM Deposit': [action_for_atm_deposit],
-    'Action for ATM Withdrawal': [action_for_atm_withdrawal]
+    'Customer Number': [],
+    'ATM Deposit Normal Volume': [],
+    'ATM Deposit Excessive Volume': [],
+    'ATM Withdrawal Normal Volume': [],
+    'ATM Withdrawal Excessive Volume': [],
+    'Total ATM Deposit': [],
+    'Average ATM Deposit': [],
+    'STD ATM Deposit': [],
+    'Total ATM Withdrawal': [],
+    'Average ATM Withdrawal': [],
+    'STD ATM Withdrawal': [],
+    'Action for ATM Deposit': [],
+    'Action for ATM Withdrawal': []
 }
 
+# Iterate through each unique customer in behavior_df
+for index, row in behavior_df.iterrows():
+    customer_number = row['Customer Number']
+    customer_behavior = row
+
+    # Filter the ATM transactions for the current customer
+    customer_atm = atm_df[atm_df['Customer Number'] == customer_number]
+
+    deposit_df = customer_atm[customer_atm['Transaction Type'] == 'Deposit'][['Jan-24', 'Feb-24', 'Mar-24']]
+    withdrawal_df = customer_atm[customer_atm['Transaction Type'] == 'Withdrawal'][['Jan-24', 'Feb-24', 'Mar-24']]
+
+    total_atm_deposit = deposit_df.sum(axis=1).sum()
+    average_atm_deposit = deposit_df.mean(axis=1).mean()
+    std_atm_deposit = deposit_df.std(axis=1).std()
+
+    total_atm_withdrawal = withdrawal_df.sum(axis=1).sum()
+    average_atm_withdrawal = withdrawal_df.mean(axis=1).mean()
+    std_atm_withdrawal = withdrawal_df.std(axis=1).std()
+
+    if average_atm_deposit > customer_behavior['ATM Deposit Excessive Volume']:
+        action_for_atm_deposit = 'Increase'
+    elif average_atm_deposit < customer_behavior['ATM Deposit Normal Volume']:
+        action_for_atm_deposit = 'Decrease'
+    else:
+        action_for_atm_deposit = 'No Action'
+
+    if average_atm_withdrawal > customer_behavior['ATM Withdrawal Excessive Volume']:
+        action_for_atm_withdrawal = 'Increase'
+    elif average_atm_withdrawal < customer_behavior['ATM Withdrawal Normal Volume']:
+        action_for_atm_withdrawal = 'Decrease'
+    else:
+        action_for_atm_withdrawal = 'No Action'
+
+    final_data['Customer Number'].append(customer_number)
+    final_data['ATM Deposit Normal Volume'].append(customer_behavior['ATM Deposit Normal Volume'])
+    final_data['ATM Deposit Excessive Volume'].append(customer_behavior['ATM Deposit Excessive Volume'])
+    final_data['ATM Withdrawal Normal Volume'].append(customer_behavior['ATM Withdrawal Normal Volume'])
+    final_data['ATM Withdrawal Excessive Volume'].append(customer_behavior['ATM Withdrawal Excessive Volume'])
+    final_data['Total ATM Deposit'].append(total_atm_deposit)
+    final_data['Average ATM Deposit'].append(average_atm_deposit)
+    final_data['STD ATM Deposit'].append(std_atm_deposit)
+    final_data['Total ATM Withdrawal'].append(total_atm_withdrawal)
+    final_data['Average ATM Withdrawal'].append(average_atm_withdrawal)
+    final_data['STD ATM Withdrawal'].append(std_atm_withdrawal)
+    final_data['Action for ATM Deposit'].append(action_for_atm_deposit)
+    final_data['Action for ATM Withdrawal'].append(action_for_atm_withdrawal)
+
+# Create the final table
 final_df = pd.DataFrame(final_data)
 
 # Display the final table

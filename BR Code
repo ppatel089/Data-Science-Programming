@@ -1,0 +1,57 @@
+import pandas as pd
+
+# Load the CSV files
+behavior_df = pd.read_csv('/path/to/behavior.csv')
+atm_df = pd.read_csv('/path/to/atm.csv')
+
+# Ensure correct data types
+behavior_df['Customer Number'] = behavior_df['Customer Number'].astype(int)
+atm_df['Customer Number'] = atm_df['Customer Number'].astype(int)
+
+# Perform calculations for the final table
+deposit_df = atm_df[atm_df['Transaction Type'] == 'Deposit'][['Jan-24', 'Feb-24', 'Mar-24']]
+withdrawal_df = atm_df[atm_df['Transaction Type'] == 'Withdrawal'][['Jan-24', 'Feb-24', 'Mar-24']]
+
+total_atm_deposit = deposit_df.sum(axis=1).values[0]
+average_atm_deposit = deposit_df.mean(axis=1).values[0]
+std_atm_deposit = deposit_df.std(axis=1).values[0]
+
+total_atm_withdrawal = withdrawal_df.sum(axis=1).values[0]
+average_atm_withdrawal = withdrawal_df.mean(axis=1).values[0]
+std_atm_withdrawal = withdrawal_df.std(axis=1).values[0]
+
+if average_atm_deposit > behavior_df['ATM Deposit Excessive Volume'][0]:
+    action_for_atm_deposit = 'Increase'
+elif average_atm_deposit < behavior_df['ATM Deposit Normal Volume'][0]:
+    action_for_atm_deposit = 'Decrease'
+else:
+    action_for_atm_deposit = 'No Action'
+
+if average_atm_withdrawal > behavior_df['ATM Withdrawal Excessive Volume'][0]:
+    action_for_atm_withdrawal = 'Increase'
+elif average_atm_withdrawal < behavior_df['ATM Withdrawal Normal Volume'][0]:
+    action_for_atm_withdrawal = 'Decrease'
+else:
+    action_for_atm_withdrawal = 'No Action'
+
+# Create the final table
+final_data = {
+    'Customer Number': behavior_df['Customer Number'],
+    'ATM Deposit Normal Volume': behavior_df['ATM Deposit Normal Volume'],
+    'ATM Deposit Excessive Volume': behavior_df['ATM Deposit Excessive Volume'],
+    'ATM Withdrawal Normal Volume': behavior_df['ATM Withdrawal Normal Volume'],
+    'ATM Withdrawal Excessive Volume': behavior_df['ATM Withdrawal Excessive Volume'],
+    'Total ATM Deposit': [total_atm_deposit],
+    'Average ATM Deposit': [average_atm_deposit],
+    'STD ATM Deposit': [std_atm_deposit],
+    'Total ATM Withdrawal': [total_atm_withdrawal],
+    'Average ATM Withdrawal': [average_atm_withdrawal],
+    'STD ATM Withdrawal': [std_atm_withdrawal],
+    'Action for ATM Deposit': [action_for_atm_deposit],
+    'Action for ATM Withdrawal': [action_for_atm_withdrawal]
+}
+
+final_df = pd.DataFrame(final_data)
+
+# Display the final table
+print(final_df)

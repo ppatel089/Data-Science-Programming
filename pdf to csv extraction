@@ -1,0 +1,40 @@
+# Function to extract checkbox status for given products
+def extract_product_status(page, product_names):
+    # Attempt to find the text associated with each product
+    status = {}
+    for product in product_names:
+        text = page.extract_text()
+        if product in text:
+            # Determine if the checkbox is checked (looking for the special character before the product name)
+            checked = "" + product in text
+            status[product] = "Yes" if checked else "No"
+    return status
+
+# List all PDF files
+pdf_files = [f for f in os.listdir('.') if f.endswith('.pdf')]
+data = []
+
+# Read each PDF and extract the required information
+for file_name in pdf_files:
+    with pdfplumber.open(file_name) as pdf:
+        # Assuming the relevant information is always on the first page
+        page = pdf.pages[0]
+        # Extract the status of the checkboxes
+        products_status = extract_product_status(page, ["Products", "TCH", "BDC"])
+        parts = file_name.replace('.pdf', '').split('---')
+        if len(parts) >= 4:
+            document_date = parts[2]
+            customer_name = parts[3].replace('-', ' ')
+            tax_id = parts[4]
+            # Append to data list, including the status of the checkboxes
+            data.append({
+                "Document Date": document_date,
+                "Customer Name": customer_name,
+                "Tax ID": tax_id,
+                "Product": products_status.get("Products", "No"),
+                "TCH": products_status.get("TCH", "No"),
+                "BDC": products_status.get("BDC", "No")
+            })
+
+# Convert to DataFrame and display
+df = pd.DataFrame(data)

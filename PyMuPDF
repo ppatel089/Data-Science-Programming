@@ -22,3 +22,31 @@ for file_name in pdf_files:
     with fitz.open(os.path.join(pdf_dir, file_name)) as doc:
         print_annotation_details(doc)
     print("=" * 50)
+
+
+import fitz
+
+def extract_text_and_images(doc):
+    for page in doc:
+        # Extract text
+        text = page.get_text("text")
+        print("Extracted text:")
+        print(text)
+
+        # Extract images
+        image_list = page.get_images(full=True)
+        print("Found images:")
+        for img in image_list:
+            xref = img[0]  # XREF of the image
+            base_image = doc.extract_image(xref)
+            print(f"Image {xref} details: {base_image['width']}x{base_image['height']} pixels")
+            # Optionally save the image to disk
+            image_filename = f'image_{xref}.png'
+            with open(image_filename, 'wb') as imgfile:
+                imgfile.write(base_image['image'])
+
+# Open the PDF
+file_path = 'path_to_your_pdf.pdf'  # Specify the path to your PDF
+doc = fitz.open(file_path)
+extract_text_and_images(doc)
+

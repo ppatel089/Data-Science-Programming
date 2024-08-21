@@ -1,13 +1,22 @@
-# Function to extract checkbox status for given products
-def extract_product_status(page, product_names):
-    # Attempt to find the text associated with each product
+import os
+import fitz  # PyMuPDF
+import pandas as pd
+
+# Function to check if a checkbox is checked
+def is_checked(widget):
+    # Check if the widget is checked based on its field flags
+    return widget.field_flags & fitz.PDF_WIDGET_FLAG_CHECKED
+
+# Function to extract product statuses
+def extract_product_status(doc, product_names):
     status = {}
-    for product in product_names:
-        text = page.extract_text()
-        if product in text:
-            # Determine if the checkbox is checked (looking for the special character before the product name)
-            checked = "" + product in text
-            status[product] = "Yes" if checked else "No"
+    for page in doc:
+        for widget in page.widgets():
+            if any(product in widget.field_value for product in product_names):
+                # Check the product and determine if it's checked
+                for product in product_names:
+                    if product in widget.field_value:
+                        status[product] = "Yes" if is_checked(widget) else "No"
     return status
 
 # List all PDF files
@@ -16,25 +25,22 @@ data = []
 
 # Read each PDF and extract the required information
 for file_name in pdf_files:
-    with pdfplumber.open(file_name) as pdf:
-        # Assuming the relevant information is always on the first page
-        page = pdf.pages[0]
-        # Extract the status of the checkboxes
-        products_status = extract_product_status(page, ["Products", "TCH", "BDC"])
+    with fitz.open(file_name) as doc:
+        products_status = extract_product_status(doc, ["Products", "ECH", "PDC"])
         parts = file_name.replace('.pdf', '').split('---')
         if len(parts) >= 4:
             document_date = parts[2]
             customer_name = parts[3].replace('-', ' ')
             tax_id = parts[4]
-            # Append to data list, including the status of the checkboxes
             data.append({
                 "Document Date": document_date,
                 "Customer Name": customer_name,
                 "Tax ID": tax_id,
-                "Product": products_status.get("Products", "No"),
-                "TCH": products_status.get("TCH", "No"),
-                "BDC": products_status.get("BDC", "No")
+                "BSA Product": products_status.get("Products", "No"),
+                "ECH": products_status.get("ECH", "No"),
+                "PDC": products_status.get("PDC", "No")
             })
 
-# Convert to DataFrame and display
+# Convert to DataFrame
 df = pd.DataFrame(data)
+import ace_tools as tools; tools.display_dataframe_to_user(name="Extracted PDF Details", dataframe=df)

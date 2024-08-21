@@ -1,0 +1,24 @@
+import os
+import fitz  # PyMuPDF
+
+def print_annotation_details(doc):
+    for page in doc:
+        print(f"Processing Page {page.number + 1}")
+        for annot in page.annots():
+            annot_type = annot.type
+            print(f"Annotation Type: {annot_type[0]} - {annot_type[1]}")
+            print(f"Field Name: {annot.field_name}")
+            print(f"Field Value: {annot.field_value}")
+            print(f"Position: {annot.rect}")
+            print("-" * 30)
+
+# Path to the directory with PDF files
+pdf_dir = '.'  # Adjust if your PDFs are in a different directory
+pdf_files = [f for f in os.listdir(pdf_dir) if f.endswith('.pdf')]
+
+# Process each PDF and print details about each annotation
+for file_name in pdf_files:
+    print(f"Processing file: {file_name}")
+    with fitz.open(os.path.join(pdf_dir, file_name)) as doc:
+        print_annotation_details(doc)
+    print("=" * 50)

@@ -2,31 +2,33 @@ import os
 import fitz  # PyMuPDF
 import pandas as pd
 
-# Function to check if a checkbox is checked
-def is_checked(widget):
-    # Check if the widget is checked based on its field flags
-    return widget.field_flags & fitz.PDF_WIDGET_FLAG_CHECKED
-
 # Function to extract product statuses
-def extract_product_status(doc, product_names):
-    status = {}
+def extract_product_status(doc):
+    status = {"Products": "No", "ECH": "No", "ADC": "No"}  # Default states
     for page in doc:
-        for widget in page.widgets():
-            if any(product in widget.field_value for product in product_names):
-                # Check the product and determine if it's checked
-                for product in product_names:
-                    if product in widget.field_value:
-                        status[product] = "Yes" if is_checked(widget) else "No"
+        # Extract text instances to find checkboxes' positions
+        text_instances = page.search_for("Products") + page.search_for("ECH") + page.search_for("ADC")
+        # Extract annotations (widgets) which are usually form fields
+        for annot in page.annots():
+            if annot.type[0] == 18:  # Widget type for form fields in PDF
+                # Check positions to determine if this annot is near a product name
+                annot_rect = annot.rect
+                for inst in text_instances:
+                    if annot_rect.intersects(inst):
+                        # If near, determine if it is checked
+                        if annot.field_value == "Yes":  # Assuming 'Yes' represents a checked state
+                            product_name = page.get_text("text", clip=inst).strip()
+                            status[product_name] = "Yes"
     return status
 
-# List all PDF files
+# List all PDF files in the current directory
 pdf_files = [f for f in os.listdir('.') if f.endswith('.pdf')]
 data = []
 
-# Read each PDF and extract the required information
+# Read eECH PDF and extract the required information
 for file_name in pdf_files:
     with fitz.open(file_name) as doc:
-        products_status = extract_product_status(doc, ["Products", "ECH", "PDC"])
+        products_status = extract_product_status(doc)
         parts = file_name.replace('.pdf', '').split('---')
         if len(parts) >= 4:
             document_date = parts[2]
@@ -36,11 +38,11 @@ for file_name in pdf_files:
                 "Document Date": document_date,
                 "Customer Name": customer_name,
                 "Tax ID": tax_id,
-                "BSA Product": products_status.get("Products", "No"),
-                "ECH": products_status.get("ECH", "No"),
-                "PDC": products_status.get("PDC", "No")
+                "SSA Product": products_status["Products"],
+                "ECH": products_status["ECH"],
+                "ADC": products_status["ADC"]
             })
 
 # Convert to DataFrame
 df = pd.DataFrame(data)
-import ace_tools as tools; tools.display_dataframe_to_user(name="Extracted PDF Details", dataframe=df)
+print(df)

@@ -143,3 +143,81 @@ df = pd.DataFrame(data)
 # Display the DataFrame
 print(df)
 
+# newer version
+import re
+import os
+import pandas as pd
+from PyPDF2 import PdfReader
+
+# Function to extract text from a PDF file
+def extract_pdf_text(pdf_file):
+    reader = PdfReader(pdf_file)
+    text = ""
+    for page in reader.pages:
+        text += page.extract_text()
+    return text
+
+# Function to extract tabular data from the extracted text
+def extract_tabular_data(text):
+    lines = text.split('\n')
+    table_data = []
+    regex = r"(\d{2}-\d+)\s+([\w\s]+?)\s+(Yes|No)\s+(.*)"
+    start_extracting = False
+    for line in lines:
+        if "Tax ID Legal/Primary Name TMS BSA KYC" in line:
+            start_extracting = True
+            continue
+        if start_extracting:
+            if line.strip() == "" or "Page" in line:
+                break
+            match = re.match(regex, line.strip())
+            if match:
+                tax_id, legal_name, tms, bsa_kyc = match.groups()
+                table_data.append({
+                    'Tax ID Entity': tax_id,
+                    'Legal Name': legal_name,
+                    'TMS': tms,
+                    'BSA KYC': bsa_kyc
+                })
+    return table_data
+
+# List all PDF files in the current directory
+pdf_files = [f for f in os.listdir('.') if f.endswith('.pdf')]
+
+data = []
+# Loop through each PDF file and extract the information
+for file_name in pdf_files:
+    parts = file_name.replace('.pdf', '').split('---')
+    if len(parts) >= 4:
+        document_date = parts[2]
+        customer_name = parts[3].replace('-', ' ')
+        tax_id = parts[4]
+
+        # Extract text from the PDF
+        text = extract_pdf_text(file_name)
+
+        # Parse the product implementation details (placeholder logic here)
+        bsa_product, ach, rdc = "No", "No", "No"  # This needs your actual logic for setting these values based on the text.
+
+        # Extract tabular data
+        table_data = extract_tabular_data(text)
+
+        # Combine data from table rows with other extracted details
+        for row in table_data:
+            data.append({
+                "Document Date": document_date,
+                "Customer Name": customer_name,
+                "Tax ID": tax_id,
+                "BSA Product": bsa_product,
+                "ACH": ach,
+                "RDC": rdc,
+                **row
+            })
+
+# Create a DataFrame
+df = pd.DataFrame(data)
+
+# Print or display the DataFrame
+print(df)
+
+

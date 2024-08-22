@@ -46,3 +46,100 @@ for file_name in pdf_files:
 # Convert to DataFrame
 df = pd.DataFrame(data)
 print(df)
+
+
+----
+
+import os
+import pandas as pd
+from PyPDF2 import PdfReader
+
+# Function to extract text from a PDF file
+def extract_pdf_text(pdf_file):
+    reader = PdfReader(pdf_file)
+    text = ""
+    for page in reader.pages:
+        text += page.extract_text()
+    return text
+
+# Function to extract tabular data from the extracted text
+def extract_tabular_data(text):
+    lines = text.split('\n')
+    table_data = []
+    # Look for table start, assuming fixed format with known headers
+    for i, line in enumerate(lines):
+        if "Tax ID" in line and "Legal/Primary Name" in line:
+            table_start = i + 1
+            break
+    else:
+        table_start = len(lines)
+    
+    # Extract data from table rows
+    for line in lines[table_start:]:
+        if line.strip() == "" or "Page" in line:  # End of table
+            break
+        parts = line.split()
+        tax_id = parts[0]
+        legal_name = " ".join(parts[1:-2])
+        tms = parts[-2]
+        bsa_kyc = parts[-1]
+        table_data.append({'Tax ID': tax_id, 'Legal/Primary Name': legal_name, 'TMS': tms, 'BSA KYC': bsa_kyc})
+    return table_data
+
+# Function to check for product implementation
+def parse_product_implementation(text):
+    bsa_product = "No"
+    ach = "No"
+    rdc = "No"
+    print("Extracted Text:\n", text)  # Debugging output
+    lines = text.splitlines()
+    for line in lines:
+        if "Products" in line:
+            if "" in line or "✔" in line:
+                bsa_product = "Yes"
+        if "ACH" in line:
+            if "" in line or "✔" in line:
+                ach = "Yes"
+        if "RDC" in line:
+            if "" in line or "✔" in line:
+                rdc = "Yes"
+    return bsa_product, ach, rdc
+
+# Prepare a list to hold all extracted data
+data = []
+
+# List all PDF files in the current directory
+pdf_files = [f for f in os.listdir('.') if f.endswith('.pdf')]
+
+# Loop through each PDF file and extract the information
+for file_name in pdf_files:
+    parts = file_name.replace('.pdf', '').split('---')
+    if len(parts) >= 4:
+        document_date = parts[2]
+        customer_name = parts[3].replace('-', ' ')
+        tax_id = parts[4]
+        
+        # Extract text from the PDF
+        text = extract_pdf_text(file_name)
+        
+        # Parse product implementation and table data
+        bsa_product, ach, rdc = parse_product_implementation(text)
+        table_data = extract_tabular_data(text)
+        
+        # Append extracted data including tabular data
+        data.append({
+            "Document Date": document_date,
+            "Customer Name": customer_name,
+            "Tax ID": tax_id,
+            "BSA Product": bsa_product,
+            "ACH": ach,
+            "RDC": rdc,
+            "Additional Info": table_data  # Append the table data as part of the entry
+        })
+
+# Convert the list to a DataFrame
+df = pd.DataFrame(data)
+
+# Display the DataFrame
+print(df)
+

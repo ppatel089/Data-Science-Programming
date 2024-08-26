@@ -221,3 +221,77 @@ df = pd.DataFrame(data)
 print(df)
 
 
+-- get all tabular data
+import pdfplumber
+import pandas as pd
+import os
+
+# Define a function to extract text from PDF
+def extract_pdf_text(pdf_file):
+    with pdfplumber.open(pdf_file) as pdf:
+        text = ""
+        for page in pdf.pages:
+            text += page.extract_text()
+        return text
+
+# Function to parse the tabular data from the extracted text
+def parse_tabular_data(text):
+    lines = text.split('\n')
+    data = []
+    start = False
+    for line in lines:
+        if "Tax ID Legal/Primary Name TMS BSA KYC" in line:
+            start = True
+            continue
+        if start and line.strip() == "":
+            break
+        if start:
+            parts = line.split()
+            if len(parts) >= 6:
+                tax_id = parts[0]
+                name = " ".join(parts[1:-2])
+                tms = parts[-2]
+                bsa_kyc = parts[-1]
+                data.append({
+                    "Tax ID_new": tax_id,
+                    "Legal/Primary Name": name,
+                    "TMS": tms,
+                    "BSA KYC": bsa_kyc
+                })
+    return data
+
+# Path to the directory containing PDF files
+pdf_directory = "path_to_your_pdf_directory"  # Update with actual path
+
+# Initialize an empty DataFrame to store all results
+master_df = pd.DataFrame()
+
+# Loop through each PDF file in the directory
+for filename in os.listdir(pdf_directory):
+    if filename.endswith('.pdf'):
+        pdf_path = os.path.join(pdf_directory, filename)
+        
+        # Extract text from the PDF file
+        pdf_text = extract_pdf_text(pdf_path)
+        
+        # Parse the extracted text to get data
+        new_data = parse_tabular_data(pdf_text)
+        
+        # Convert the list of dictionaries to a DataFrame
+        new_df = pd.DataFrame(new_data)
+        
+        # Add a static 'Customer Name', 'Document Date', and other known fields
+        new_df['Customer Name'] = "Example Company LLC"  # Update as necessary
+        new_df['Document Date'] = "6/1/2021"  # Update as necessary
+        new_df['BSA Product'] = "Yes"
+        new_df['ACH'] = "No"
+        new_df['RDC'] = "Yes"
+
+        # Append the new data to the master DataFrame
+        master_df = pd.concat([master_df, new_df], ignore_index=True)
+
+# Display the final DataFrame
+print(master_df.head())
+
+# Optionally, save the DataFrame to a CSV file
+master_df.to_csv("final_output.csv", index=False)

@@ -295,3 +295,78 @@ print(master_df.head())
 
 # Optionally, save the DataFrame to a CSV file
 master_df.to_csv("final_output.csv", index=False)
+
+#################Updated#################
+import pdfplumber
+import pandas as pd
+import os
+
+def extract_pdf_text(pdf_file):
+    with pdfplumber.open(pdf_file) as pdf:
+        text = ""
+        for page in pdf.pages:
+            text += page.extract_text()
+        return text
+
+def parse_tabular_data(text):
+    lines = text.split('\n')
+    data = []
+    start = False
+    for line in lines:
+        if "Tax ID Legal/Primary Name TMS BSA KYC" in line:
+            start = True
+            continue
+        if start and line.strip() == "":
+            break
+        if start:
+            parts = line.split()
+            if len(parts) >= 6:
+                tax_id = parts[0]
+                name = " ".join(parts[1:-2])
+                tms = parts[-2]
+                bsa_kyc = parts[-1]
+                data.append({
+                    "Tax ID_new": tax_id,
+                    "Legal/Primary Name": name,
+                    "TMS": tms,
+                    "BSA KYC": bsa_kyc
+                })
+    return data
+
+def extract_dynamic_details(filename, text):
+    # Extract Customer Name, Document Date from filename if pattern is known
+    # Example filename: "Example_Company_LLC-20210601-details.pdf"
+    parts = filename.split('-')
+    customer_name = parts[0].replace('_', ' ')
+    document_date = parts[1][:4] + '-' + parts[1][4:6] + '-' + parts[1][6:]
+    
+    # Extract BSA Product, ACH, RDC by analyzing the text (set default values or complex logic)
+    bsa_product = "Yes" if "BSA Product: Yes" in text else "No"
+    ach = "Yes" if "ACH Service: Enabled" in text else "No"
+    rdc = "Yes" if "RDC Service: Active" in text else "No"
+    
+    return customer_name, document_date, bsa_product, ach, rdc
+
+pdf_directory = "path_to_your_pdf_directory"
+master_df = pd.DataFrame()
+
+for filename in os.listdir(pdf_directory):
+    if filename.endswith('.pdf'):
+        pdf_path = os.path.join(pdf_directory, filename)
+        pdf_text = extract_pdf_text(pdf_path)
+        new_data = parse_tabular_data(pdf_text)
+        new_df = pd.DataFrame(new_data)
+        
+        # Dynamically extract other details from the filename or text
+        customer_name, document_date, bsa_product, ach, rdc = extract_dynamic_details(filename, pdf_text)
+        new_df['Customer Name'] = customer_name
+        new_df['Document Date'] = document_date
+        new_df['BSA Product'] = bsa_product
+        new_df['ACH'] = ach
+        new_df['RDC'] = rdc
+        
+        master_df = pd.concat([master_df, new_df], ignore_index=True)
+
+print(master_df.head())
+master_df.to_csv("final_output.csv", index=False)
+

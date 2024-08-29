@@ -503,5 +503,36 @@ df = pd.DataFrame(data)
 print(df.head())
 df.to_csv("final_output.csv", index=False)
 
+### easy ocr############
+import easyocr
+import pdf2image
+import os
+
+def convert_pdf_to_images(pdf_path):
+    """Converts each page of a PDF to an image."""
+    return pdf2image.convert_from_path(pdf_path, dpi=300, fmt='jpeg')
+
+def extract_text_from_images(images):
+    """Uses EasyOCR to extract text from a list of image files."""
+    reader = easyocr.Reader(['en'])  # Assuming English; add other languages if needed
+    text = []
+    for image in images:
+        results = reader.readtext(image, paragraph=True)  # Use paragraph mode to better format the output
+        page_text = " ".join([result[1] for result in results])
+        text.append(page_text)
+    return text
+
+def process_pdf(pdf_path):
+    """Converts a PDF to images, extracts text, and prints the results."""
+    images = convert_pdf_to_images(pdf_path)
+    extracted_text = extract_text_from_images(images)
+    for page_number, page_text in enumerate(extracted_text, start=1):
+        print(f"Text from Page {page_number}: {page_text}\n")
+
+# Example usage
+pdf_files = [f for f in os.listdir('.') if f.endswith('.pdf')]
+for pdf_file in pdf_files:
+    print(f"Processing {pdf_file}...")
+    process_pdf(pdf_file)
 
 

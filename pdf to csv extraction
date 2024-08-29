@@ -535,4 +535,43 @@ for pdf_file in pdf_files:
     print(f"Processing {pdf_file}...")
     process_pdf(pdf_file)
 
+### without poppler###
+import fitz  # PyMuPDF
+import os
+
+def convert_pdf_to_images(pdf_path):
+    """Converts each page of a PDF to an image using PyMuPDF."""
+    doc = fitz.open(pdf_path)
+    images = []
+    for page in doc:
+        pix = page.get_pixmap()
+        img_path = f"page_{page.number}.png"
+        pix.save(img_path)
+        images.append(img_path)
+    return images
+
+def extract_text_from_images(images):
+    import easyocr
+    reader = easyocr.Reader(['en'])  # Assuming English; add other languages if needed
+    text = []
+    for image_path in images:
+        results = reader.readtext(image_path, paragraph=True)
+        page_text = " ".join([result[1] for result in results])
+        text.append(page_text)
+    return text
+
+def process_pdf(pdf_path):
+    """Converts a PDF to images and extracts text."""
+    images = convert_pdf_to_images(pdf_path)
+    extracted_text = extract_text_from_images(images)
+    for page_number, page_text in enumerate(extracted_text, start=1):
+        print(f"Text from Page {page_number}: {page_text}")
+
+# Example usage
+pdf_files = [f for f in os.listdir('.') if f.endswith('.pdf')]
+for pdf_file in pdf_files:
+    print(f"Processing {pdf_file}...")
+    process_pdf(pdf_file)
+
+
 

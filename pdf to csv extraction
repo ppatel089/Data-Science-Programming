@@ -441,4 +441,67 @@ for filename in pdf_files:
 print(master_df.head())
 master_df.to_csv("final_output.csv", index=False)
 
+### try to convert to image###
+import pdfplumber
+import pytesseract
+from pdf2image import convert_from_path
+import pandas as pd
+import os
+
+# Configure Pytesseract path to where the Tesseract executable is located
+pytesseract.pytesseract.tesseract_cmd = r'path_to_tesseract.exe'  # Update this path
+
+def extract_pdf_text(pdf_file):
+    text = ""
+    # Try extracting text using pdfplumber
+    try:
+        with pdfplumber.open(pdf_file) as pdf:
+            for page in pdf.pages:
+                text += page.extract_text() or ''
+    except Exception as e:
+        print(f"Failed to extract using pdfplumber due to: {e}")
+    # If no text was found, use OCR
+    if not text:
+        print("No text found with pdfplumber, attempting OCR...")
+        images = convert_from_path(pdf_file)
+        for image in images:
+            text += pytesseract.image_to_string(image)
+    return text
+
+def parse_tabular_data(text):
+    lines = text.split('\n')
+    data = []
+    start = False
+    for line in lines:
+        if "Tax ID Legal/Primary Name TMS BSA KYC" in line:
+            start = True
+            continue
+        if start and line.strip() == "":
+            break
+        if start:
+            parts = line.split()
+            if len(parts) >= 6:
+                data.append({
+                    "Tax_ID_new": parts[0],
+                    "Legal/Primary Name": " ".join(parts[1:-2]),
+                    "TMS": parts[-2],
+                    "BSA-KYC": parts[-1]
+                })
+    return data
+
+# List all PDF files in the current directory
+pdf_files = [f for f in os.listdir('.') if f.endswith('.pdf')]
+data = []
+
+for file_name in pdf_files:
+    text = extract_pdf_text(file_name)
+    new_data = parse_tabular_data(text)
+    data.extend(new_data)
+
+# Convert the list to a DataFrame
+df = pd.DataFrame(data)
+print(df.head())
+df.to_csv("final_output.csv", index=False)
+
+
 

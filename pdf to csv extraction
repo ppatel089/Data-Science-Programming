@@ -573,5 +573,6 @@ for pdf_file in pdf_files:
     print(f"Processing {pdf_file}...")
     process_pdf(pdf_file)
 
-
+###regex pattern
+pattern = r"(?P<ID>\d{2}-\d{8})\s+(?P<Name>[\w\s]+(?:INC|LLC|INS))\s+(?P<PMS>Yes)\s+(?P<ASA_KPC>N/A, online only)"
 

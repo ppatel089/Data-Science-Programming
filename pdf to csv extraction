@@ -576,3 +576,70 @@ for pdf_file in pdf_files:
 ###regex pattern
 pattern = r"(?P<ID>\d{2}-\d{8})\s+(?P<Name>[\w\s]+(?:INC|LLC|INS))\s+(?P<PMS>Yes)\s+(?P<ASA_KPC>N/A, online only)"
 
+###try###
+import fitz  # PyMuPDF
+import os
+import pandas as pd
+import easyocr
+import re
+
+def convert_pdf_to_images(pdf_path):
+    """Converts each page of a PDF to an image using PyMuPDF."""
+    doc = fitz.open(pdf_path)
+    images = []
+    for page in doc:
+        pix = page.get_pixmap()
+        img_path = f"page_{page.number}.png"
+        pix.save(img_path)
+        images.append(img_path)
+    return images
+
+def extract_text_from_images(images):
+    reader = easyocr.Reader(['en'])  # Assuming English; add other languages if needed
+    text = []
+    for image_path in images:
+        results = reader.readtext(image_path, paragraph=True)
+        page_text = " ".join([result[1] for result in results])
+        text.append(page_text)
+    return text
+
+def extract_data(text):
+    """ Extracts and parses data after the specific header. """
+    header = "Tax ID Legal/Primary Name TMS BSA KYC"
+    start_index = text.find(header) + len(header) if header in text else -1
+    if start_index == -1:
+        return []  # Header not found, or no data following the header
+    
+    data_text = text[start_index:]
+    # Regex to match the expected format of records
+    pattern = r"(\d{2}-\d{7,8})\s+([\w\s]+?)\s+(Yes|No)\s+(.*?)(?=\s+\d{2}-\d{7,8}\s+|$)"
+    matches = re.finditer(pattern, data_text, re.IGNORECASE)
+    
+    records = []
+    for match in matches:
+        records.append({
+            'Tax ID': match.group(1),
+            'Legal/Primary Name': match.group(2).strip(),
+            'TMS': match.group(3),
+            'BSA KYC': match.group(4).strip()
+        })
+    
+    return records
+
+def process_pdf(pdf_path):
+    """Process a single PDF file."""
+    images = convert_pdf_to_images(pdf_path)
+    text = " ".join(extract_text_from_images(images))
+    return extract_data(text)
+
+# Example usage
+df = pd.DataFrame()
+pdf_files = [f for f in os.listdir('.') if f.endswith('.pdf')]
+for pdf_file in pdf_files:
+    print(f"Processing {pdf_file}...")
+    records = process_pdf(pdf_file)
+    if records:
+        df = pd.concat([df, pd.DataFrame(records)], ignore_index=True)
+
+print(df)
+

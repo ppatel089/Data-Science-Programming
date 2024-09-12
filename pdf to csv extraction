@@ -643,3 +643,30 @@ for pdf_file in pdf_files:
 
 print(df)
 
+# PDF Processing with OCR
+
+## Overview
+This script processes PDF files to extract text, check for specific phrases, and retrieve structured data from the text. It uses Optical Character Recognition (OCR) to convert images extracted from PDFs into searchable and editable text formats.
+
+## Features
+- **Convert PDF to Images**: Uses PyMuPDF to convert PDF pages into images at a specified zoom level to enhance the clarity for OCR.
+- **Extract Text**: Implements EasyOCR to perform OCR on the images and concatenates the text from all pages.
+- **Phrase Checking**: Searches for predefined phrases within the extracted text, handling variations in specific compliance-related phrases.
+- **Data Extraction**: Extracts structured data following a specified header from the OCR text.
+- **File Metadata Extraction**: Retrieves basic information from the PDF filenames.
+
+## Usage
+Run this script in a directory containing PDF files. It will process each PDF and output the extracted data and phrase check results into a consolidated DataFrame.
+
+## Requirements
+- fitz (PyMuPDF)
+- pandas
+- easyocr
+- re (regex)
+
+Ensure all dependencies are installed using `pip install PyMuPDF pandas easyocr` and that Python 3.x is being used.
+
+## Output
+The script outputs a DataFrame with columns structured as follows: Document Date, Customer Name, Tax ID, BSA, RDC, ACH, Tax IDs, Legal/Primary Names, TMS List, and BSA KYC List. Data is stored even if some PDFs do not contain the expected structured format.
+
+

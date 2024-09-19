@@ -63,3 +63,65 @@ print(df.head())
 # Save the DataFrame to an Excel file if needed
 output_path = os.path.join(directory_path, 'output.xlsx')
 df.to_excel(output_path, index=False)
+
+
+###try 
+import pandas as pd
+import os
+
+# Use the current working directory
+directory_path = os.getcwd()
+
+# List to hold all the data from all files
+all_data = []
+
+# Helper function to process each block of text
+def process_block(block):
+    # Initialize dictionary to hold transaction data
+    transaction_data = {}
+    for line in block:
+        parts = line.strip().split()
+        if parts:
+            if 'EMPLOYEE' in line:  # Start capturing transaction
+                transaction_data = {
+                    'EMPLOYEE': ' '.join(parts[1:-8]),
+                    'PRIMARY NAME': parts[-8],
+                    'DATE': parts[-7],
+                    'TIME': parts[-6],
+                    'SE': parts[-5],
+                    'COMMAND': ' '.join(parts[-4:-2]),
+                    'EXCEPTION': ' '.join(parts[-2:])
+                }
+            else:  # Continue to capture command and exception if they spill over multiple lines
+                if 'STN:' in line:
+                    transaction_data['COMMAND'] += ' ' + ' '.join(parts)
+                elif 'SOURCE:' in line:
+                    transaction_data['EXCEPTION'] += ' ' + ' '.join(parts)
+
+    # Append the completed transaction data to the list
+    if transaction_data:
+        all_data.append(transaction_data)
+
+# Read and process all .txt files in the specified directory
+for filename in os.listdir(directory_path):
+    if filename.endswith('.txt'):
+        file_path = os.path.join(directory_path, filename)
+        with open(file_path, 'r') as file:
+            current_block = []
+            for line in file:
+                if 'EMPLOYEE' in line and current_block:  # New transaction starts
+                    process_block(current_block)
+                    current_block = []  # Clear current block for the next transaction
+                current_block.append(line)
+            if current_block:  # Don't forget to process the last block
+                process_block(current_block)
+
+# Create a DataFrame from the collected data
+df = pd.DataFrame(all_data)
+
+# Display the first few rows of the DataFrame to verify
+print(df.head())
+
+# Optionally save the DataFrame to an Excel file
+output_excel_path = os.path.join(directory_path, 'parsed_transactions.xlsx')
+df.to_excel(output_excel_path, index=False)

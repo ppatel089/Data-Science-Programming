@@ -125,3 +125,71 @@ print(df.head())
 # Optionally save the DataFrame to an Excel file
 output_excel_path = os.path.join(directory_path, 'parsed_transactions.xlsx')
 df.to_excel(output_excel_path, index=False)
+
+
+## multiple records
+import pandas as pd
+import os
+
+# Use the current working directory
+directory_path = os.getcwd()
+
+# List to hold all the data from all files
+all_data = []
+
+# Helper function to process each block of text
+def process_block(block):
+    # Temporary data storage for employee and primary name
+    employee_name = ''
+    primary_name = ''
+    for line in block:
+        parts = line.strip().split()
+        if 'EMPLOYEE' not in line and parts:
+            if not employee_name:  # Capture the employee's name
+                employee_name = ' '.join(parts[:2])
+            if len(parts) > 2 and parts[2].isupper():  # Presence of primary name
+                primary_name = ' '.join(parts[2:-3])
+                date = parts[-3]
+                time = parts[-2]
+                se = parts[-1]
+                command = ''
+                exception = ''
+            else:
+                if 'STN:' in line or 'SOURCE:' not in line:
+                    command = ' '.join(parts)
+                if 'SOURCE:' in line:
+                    exception = ' '.join(parts)
+                if primary_name:  # Ensure primary name exists before appending
+                    all_data.append({
+                        'EMPLOYEE': employee_name,
+                        'PRIMARY NAME': primary_name,
+                        'DATE': date,
+                        'TIME': time,
+                        'SE': se,
+                        'COMMAND': command,
+                        'EXCEPTION': exception
+                    })
+
+# Read and process all .txt files in the specified directory
+for filename in os.listdir(directory_path):
+    if filename.endswith('.txt'):
+        file_path = os.path.join(directory_path, filename)
+        with open(file_path, 'r') as file:
+            current_block = []
+            for line in file:
+                if 'EMPLOYEE' in line and current_block:
+                    process_block(current_block)
+                    current_block = []  # Reset block after processing
+                current_block.append(line)
+            if current_block:  # Process the last block
+                process_block(current_block)
+
+# Create a DataFrame
+df = pd.DataFrame(all_data)
+
+# Print the DataFrame to see the result
+print(df.head())
+
+# Save the DataFrame to an Excel file if needed
+output_path = os.path.join(directory_path, 'output.xlsx')
+df.to_excel(output_path, index=False)

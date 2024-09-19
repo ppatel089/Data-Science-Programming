@@ -1,0 +1,65 @@
+import pandas as pd
+import os
+
+# Use the current working directory
+directory_path = os.getcwd()
+
+# List to hold all the data from all files
+all_data = []
+
+# Helper function to process each block of text
+def process_block(block):
+    # Dictionary to hold the data of one transaction
+    data_entry = {
+        'EMPLOYEE': '',
+        'PRIMARY NAME': '',
+        'DATE': '',
+        'TIME': '',
+        'SE': '',
+        'COMMAND': '',
+        'EXCEPTION': ''
+    }
+    # Iterate through each line in the block
+    for line in block:
+        parts = line.strip().split()
+        if 'EMPLOYEE' not in line and parts:
+            if not data_entry['EMPLOYEE']:  # Set employee name if not set
+                data_entry['EMPLOYEE'] = ' '.join(parts[:2])
+            if len(parts) > 2 and parts[2].isupper():  # Check if it has a primary name
+                data_entry['PRIMARY NAME'] = ' '.join(parts[2:-3])
+                data_entry['DATE'] = parts[-3]
+                data_entry['TIME'] = parts[-2]
+                data_entry['SE'] = parts[-1]
+            else:
+                if 'STN:' in line:
+                    data_entry['COMMAND'] += (' ' + ' '.join(parts)).strip()
+                elif 'SOURCE:' in line:
+                    data_entry['EXCEPTION'] += (' ' + ' '.join(parts)).strip()
+                else:
+                    data_entry['COMMAND'] += (' ' + ' '.join(parts)).strip()
+    if data_entry['PRIMARY NAME']:  # Only append if PRIMARY NAME exists
+        all_data.append(data_entry)
+
+# Read and process all .txt files in the specified directory
+for filename in os.listdir(directory_path):
+    if filename.endswith('.txt'):
+        file_path = os.path.join(directory_path, filename)
+        with open(file_path, 'r') as file:
+            current_block = []
+            for line in file:
+                if 'EMPLOYEE' in line and current_block:
+                    process_block(current_block)
+                    current_block = []
+                current_block.append(line)
+            if current_block:  # Process the last block
+                process_block(current_block)
+
+# Create a DataFrame
+df = pd.DataFrame(all_data)
+
+# Print the DataFrame to see the result
+print(df.head())
+
+# Save the DataFrame to an Excel file if needed
+output_path = os.path.join(directory_path, 'output.xlsx')
+df.to_excel(output_path, index=False)

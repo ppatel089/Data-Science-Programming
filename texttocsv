@@ -269,60 +269,69 @@ import pandas as pd
 import os
 import re
 
+# Define a function to check if a line contains any unwanted patterns
+def contains_unwanted(line, patterns):
+    return any(pattern in line for pattern in patterns)
+
 # Function to parse a single file
 def parse_file(file_path):
     data = []
-    start_parsing = False  # Flag to indicate when to start parsing
+    start_parsing = False
     header_signature = "......EMPLOYEE...... ........PRIMARY NAME........   DATE    TIME    SE    COMMAND..................................EXCEPTION............................."
-    unwanted_patterns = ["Inst  :", "Report:", "System:"]  # List of unwanted line patterns
+    unwanted_patterns = ["Inst  :", "Report:", "System:"]
 
     with open(file_path, 'r') as file:
-        lines = file.readlines()
+        lines = [line.strip() for line in file.readlines()]
         i = 0
         while i < len(lines):
-            line = lines[i].strip()
-            if any(unwanted in line for unwanted in unwanted_patterns) or header_signature in line:
+            if contains_unwanted(lines[i], unwanted_patterns) or header_signature in lines[i]:
                 i += 1
                 continue  # Skip unwanted lines and headers
 
-            if start_parsing:
-                if i+1 < len(lines):  # Check for the existence of a subsequent line
-                    first_line = line
-                    j = i + 1  # Start checking from the next line
-                    while j < len(lines):
-                        second_line = lines[j].strip()
-                        if any(unwanted in second_line for unwanted in unwanted_patterns):
-                            j += 1
-                            continue  # Skip unwanted lines within transaction details
-                        # Once a valid second line is found, break the loop
-                        break
+            # Flag to start parsing the actual transaction records after the header
+            if not start_parsing:
+                start_parsing = True
+                i += 1
+                continue
 
-                    # Process the transaction
-                    parts = first_line.split()
-                    if len(parts) >= 5:
-                        employee = ' '.join(parts[0:2])
-                        primary_name = ' '.join(parts[2:-3])
-                        date, time, se = parts[-3], parts[-2], parts[-1]
+            # Ensure that there are at least two lines to process as a transaction pair
+            if i + 1 >= len(lines):
+                break
 
-                        command = second_line.split('SOURCE:')[0].strip()
-                        exception = second_line.split('SOURCE:')[1].strip() if 'SOURCE:' in second_line else ''
+            first_line = lines[i]
+            j = i + 1  # Start checking from the next line to find a valid second line
 
-                        data.append({
-                            'EMPLOYEE': employee,
-                            'PRIMARY NAME': primary_name,
-                            'DATE': date,
-                            'TIME': time,
-                            'SE': se,
-                            'COMMAND': command,
-                            'EXCEPTION': exception
-                        })
-                        i = j + 1  # Move index past the second line of the current transaction
-                else:
-                    break  # No more lines to process
-            else:
-                start_parsing = True  # Start parsing after skipping initial unwanted lines
-                i += 1  # Increment index to start with the next line
-        return data
+            # Find the next valid line that does not contain unwanted patterns
+            while j < len(lines) and contains_unwanted(lines[j], unwanted_patterns):
+                j += 1
+
+            if j >= len(lines):  # If no valid second line is found, break out of the loop
+                break
+
+            second_line = lines[j]
+
+            # Assuming each part has sufficient data to parse as per transaction record structure
+            parts = first_line.split()
+            if len(parts) >= 5:
+                employee = ' '.join(parts[0:2])
+                primary_name = ' '.join(parts[2:-3])
+                date, time, se = parts[-3], parts[-2], parts[-1]
+
+                command = second_line.split('SOURCE:')[0].strip()
+                exception = second_line.split('SOURCE:')[1].strip() if 'SOURCE:' in second_line else ''
+
+                data.append({
+                    'EMPLOYEE': employee,
+                    'PRIMARY NAME': primary_name,
+                    'DATE': date,
+                    'TIME': time,
+                    'SE': se,
+                    'COMMAND': command,
+                    'EXCEPTION': exception
+                })
+            i = j + 1  # Move to the next potential first line of the next transaction set
+
+    return data
 
 # Directory containing the text files
 directory_path = '.'
@@ -346,3 +355,4 @@ output_excel_path = 'TransactionData.xlsx'
 df.to_excel(output_excel_path, index=False)
 
 print(f"Data from all files has been written to Excel successfully at {output_excel_path}.")
+

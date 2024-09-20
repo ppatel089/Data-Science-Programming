@@ -264,3 +264,85 @@ df.to_excel(output_excel_path, index=False)
 
 print(f"Data from all files has been written to Excel successfully at {output_excel_path}.")
 
+### unwanted patterns
+import pandas as pd
+import os
+import re
+
+# Function to parse a single file
+def parse_file(file_path):
+    data = []
+    start_parsing = False  # Flag to indicate when to start parsing
+    header_signature = "......EMPLOYEE...... ........PRIMARY NAME........   DATE    TIME    SE    COMMAND..................................EXCEPTION............................."
+    unwanted_patterns = ["Inst  :", "Report:", "System:"]  # List of unwanted line patterns
+
+    with open(file_path, 'r') as file:
+        lines = file.readlines()
+        i = 0
+        while i < len(lines):
+            line = lines[i].strip()
+            if any(unwanted in line for unwanted in unwanted_patterns) or header_signature in line:
+                i += 1
+                continue  # Skip unwanted lines and headers
+
+            if start_parsing:
+                if i+1 < len(lines):  # Check for the existence of a subsequent line
+                    first_line = line
+                    j = i + 1  # Start checking from the next line
+                    while j < len(lines):
+                        second_line = lines[j].strip()
+                        if any(unwanted in second_line for unwanted in unwanted_patterns):
+                            j += 1
+                            continue  # Skip unwanted lines within transaction details
+                        # Once a valid second line is found, break the loop
+                        break
+
+                    # Process the transaction
+                    parts = first_line.split()
+                    if len(parts) >= 5:
+                        employee = ' '.join(parts[0:2])
+                        primary_name = ' '.join(parts[2:-3])
+                        date, time, se = parts[-3], parts[-2], parts[-1]
+
+                        command = second_line.split('SOURCE:')[0].strip()
+                        exception = second_line.split('SOURCE:')[1].strip() if 'SOURCE:' in second_line else ''
+
+                        data.append({
+                            'EMPLOYEE': employee,
+                            'PRIMARY NAME': primary_name,
+                            'DATE': date,
+                            'TIME': time,
+                            'SE': se,
+                            'COMMAND': command,
+                            'EXCEPTION': exception
+                        })
+                        i = j + 1  # Move index past the second line of the current transaction
+                else:
+                    break  # No more lines to process
+            else:
+                start_parsing = True  # Start parsing after skipping initial unwanted lines
+                i += 1  # Increment index to start with the next line
+        return data
+
+# Directory containing the text files
+directory_path = '.'
+
+# List all .txt files in the directory
+files = [f for f in os.listdir(directory_path) if f.endswith('.txt')]
+
+# Initialize an empty DataFrame
+df = pd.DataFrame()
+
+# Process each file
+for file in files:
+    file_path = os.path.join(directory_path, file)
+    file_data = parse_file(file_path)
+    df = pd.concat([df, pd.DataFrame(file_data)], ignore_index=True)
+
+# Specify the path for the output Excel file
+output_excel_path = 'TransactionData.xlsx'
+
+# Write the DataFrame to an Excel file
+df.to_excel(output_excel_path, index=False)
+
+print(f"Data from all files has been written to Excel successfully at {output_excel_path}.")

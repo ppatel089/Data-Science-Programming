@@ -1,1 +1,76 @@
+import os
+import re
+import pandas as pd
+
+# Define the directory where text files are stored
+directory = '/mnt/data'  # Adjust this path if your text files are located in a different directory
+
+# Define regex patterns to parse each section
+transaction_start_pattern = re.compile(r'^52')
+routing_number_pattern = re.compile(r'^62')
+memo_pattern = re.compile(r'^705')
+transaction_end_pattern = re.compile(r'^82')
+
+# Initialize empty list to store parsed transactions
+transactions = []
+
+# Function to parse a single transaction
+def parse_transaction(lines):
+    transaction = {
+        "Customer Name": "",
+        "Tax ID": "",
+        "Sec Code": "",
+        "Description": "",
+        "Routing Number": "",
+        "Account Number": "",
+        "Amount": "",
+        "Payee": "",
+        "Memo": ""
+    }
+    
+    for line in lines:
+        # Identify transaction start line and extract customer data
+        if transaction_start_pattern.match(line):
+            parts = line.split()
+            transaction["Customer Name"] = " ".join(parts[1:4])
+            transaction["Tax ID"] = parts[4]
+            transaction["Sec Code"] = parts[5][:3]
+            transaction["Description"] = parts[5][3:]
+
+        # Identify routing number and account number
+        elif routing_number_pattern.match(line):
+            transaction["Routing Number"] = line[3:12]
+            transaction["Account Number"] = line[12:16]
+            transaction["Amount"] = line[16:26]
+            transaction["Payee"] = line[26:].strip()
+
+        # Identify memo line
+        elif memo_pattern.match(line):
+            transaction["Memo"] = line[3:].strip()
+
+        # Identify end of transaction
+        elif transaction_end_pattern.match(line):
+            transactions.append(transaction.copy())  # Add completed transaction to list
+            break  # Move to next transaction
+
+# Process all text files in the directory
+for filename in os.listdir(directory):
+    if filename.endswith('.txt'):
+        with open(os.path.join(directory, filename), 'r') as file:
+            lines = file.readlines()
+            transaction_lines = []
+            for line in lines:
+                line = line.strip()
+                if transaction_start_pattern.match(line):
+                    if transaction_lines:
+                        parse_transaction(transaction_lines)
+                        transaction_lines = []
+                transaction_lines.append(line)
+            if transaction_lines:
+                parse_transaction(transaction_lines)
+
+# Convert transactions list to DataFrame and save as CSV
+df = pd.DataFrame(transactions)
+df.to_csv('/mnt/data/parsed_transactions.csv', index=False)
+print("Parsed data saved to parsed_transactions.csv")
 

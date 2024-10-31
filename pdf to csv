@@ -14,65 +14,53 @@ transaction_end_pattern = re.compile(r'^82')
 # Initialize empty list to store parsed transactions
 transactions = []
 
-# Function to parse a single transaction
-def parse_transaction(lines):
+# Variables to hold the current Customer Name, Tax ID, Sec Code, and Description
+current_customer_name = ""
+current_tax_id = ""
+current_sec_code = ""
+current_description = ""
+
+# Function to parse a single transaction line starting with 62
+def parse_62_line(line):
     transaction = {
-        "Customer Name": "",
-        "Tax ID": "",
-        "Sec Code": "",
-        "Description": "",
-        "Routing Number": "",
-        "Account Number": "",
-        "Amount": "",
-        "Payee": "",
-        "Memo": ""
+        "Customer Name": current_customer_name,
+        "Tax ID": current_tax_id,
+        "Sec Code": current_sec_code,
+        "Description": current_description,
+        "Routing Number": line[3:12].strip(),
+        "Account Number": line[12:16].strip(),
+        "Amount": line[16:26].strip(),
+        "Payee": line[26:].strip(),
+        "Memo": ""  # Memo will be added if a line starting with 705 is found
     }
-    
-    for line in lines:
-        # Identify transaction start line and extract customer data
-        if transaction_start_pattern.match(line):
-            parts = line.split()
-            if len(parts) > 5:  # Ensure enough elements exist
-                transaction["Customer Name"] = " ".join(parts[1:4])
-                transaction["Tax ID"] = parts[4]
-                transaction["Sec Code"] = parts[5][:3]
-                transaction["Description"] = parts[5][3:]
-            else:
-                print(f"Skipping line due to unexpected format: {line}")
-                continue
-
-        # Identify routing number and account number
-        elif routing_number_pattern.match(line):
-            if len(line) > 26:  # Check line length for indexing
-                transaction["Routing Number"] = line[3:12]
-                transaction["Account Number"] = line[12:16]
-                transaction["Amount"] = line[16:26]
-                transaction["Payee"] = line[26:].strip()
-
-        # Identify memo line
-        elif memo_pattern.match(line):
-            transaction["Memo"] = line[3:].strip()
-
-        # Identify end of transaction
-        elif transaction_end_pattern.match(line):
-            transactions.append(transaction.copy())  # Add completed transaction to list
-            break  # Move to next transaction
+    transactions.append(transaction)
 
 # Process all text files in the directory
 for filename in os.listdir(directory):
     if filename.endswith('.txt'):
         with open(os.path.join(directory, filename), 'r') as file:
             lines = file.readlines()
-            transaction_lines = []
             for line in lines:
                 line = line.strip()
+
+                # Parse Customer Name, Tax ID, Sec Code, and Description for lines starting with 52
                 if transaction_start_pattern.match(line):
-                    if transaction_lines:
-                        parse_transaction(transaction_lines)
-                        transaction_lines = []
-                transaction_lines.append(line)
-            if transaction_lines:
-                parse_transaction(transaction_lines)
+                    current_customer_name = line[4:34].strip()  # Extract Customer Name from positions 4 to 34
+                    current_tax_id = line[34:45].strip()  # Extract Tax ID from positions 34 to 45
+                    current_sec_code = line[45:48].strip()  # Extract Sec Code from positions 45 to 48
+                    current_description = line[48:58].strip()  # Extract Description from positions 48 to 58
+
+                # Parse each transaction line starting with 62
+                elif routing_number_pattern.match(line):
+                    parse_62_line(line)
+
+                # Add Memo to the last transaction if line starts with 705
+                elif memo_pattern.match(line) and transactions:
+                    transactions[-1]["Memo"] = line[3:].strip()
+
+                # Identify end of transaction group
+                elif transaction_end_pattern.match(line):
+                    continue  # Move to the next group of transactions
 
 # Convert transactions list to DataFrame and save as CSV
 df = pd.DataFrame(transactions)

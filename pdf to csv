@@ -32,17 +32,22 @@ def parse_transaction(lines):
         # Identify transaction start line and extract customer data
         if transaction_start_pattern.match(line):
             parts = line.split()
-            transaction["Customer Name"] = " ".join(parts[1:4])
-            transaction["Tax ID"] = parts[4]
-            transaction["Sec Code"] = parts[5][:3]
-            transaction["Description"] = parts[5][3:]
+            if len(parts) > 5:  # Ensure enough elements exist
+                transaction["Customer Name"] = " ".join(parts[1:4])
+                transaction["Tax ID"] = parts[4]
+                transaction["Sec Code"] = parts[5][:3]
+                transaction["Description"] = parts[5][3:]
+            else:
+                print(f"Skipping line due to unexpected format: {line}")
+                continue
 
         # Identify routing number and account number
         elif routing_number_pattern.match(line):
-            transaction["Routing Number"] = line[3:12]
-            transaction["Account Number"] = line[12:16]
-            transaction["Amount"] = line[16:26]
-            transaction["Payee"] = line[26:].strip()
+            if len(line) > 26:  # Check line length for indexing
+                transaction["Routing Number"] = line[3:12]
+                transaction["Account Number"] = line[12:16]
+                transaction["Amount"] = line[16:26]
+                transaction["Payee"] = line[26:].strip()
 
         # Identify memo line
         elif memo_pattern.match(line):
@@ -73,4 +78,3 @@ for filename in os.listdir(directory):
 df = pd.DataFrame(transactions)
 df.to_csv('/mnt/data/parsed_transactions.csv', index=False)
 print("Parsed data saved to parsed_transactions.csv")
-
